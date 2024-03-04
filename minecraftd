@@ -49,15 +49,14 @@ flg_con=false
 flg_srt=false
 flg_stp=false
 jar='/usr/share/java/mcserver.jar'
-loc='/tmp/minecraftd.pid'
+loc='/tmp/minecraftd.lock'
 mem='2g'
 mem_srt='1g'
 mem_tmp=
 n_acts=0
-pid=$$
+stdin=
 reqs=(java)
 srv='/srv/minecraft'
-stdin=
 
 ## functions ::
 msg() { printf "\e[1;38;5;12m=> \e[0;38;5;15m$1\e[0m\n" "${@:2}" ;}
@@ -97,6 +96,16 @@ fi
 if [ "$flg_cmd" = false ] && [ $# -gt 0 ]; then
     msg_error "unknown args: $*"
     exit 3
+fi
+
+# no action:
+if [ $n_acts -eq 0 ]; then
+    if [ -f "$loc" ] && ps -p "$(cat "$loc")" &>/dev/null; then
+        msg 'minecraft server is running'
+        exit
+    fi
+    msg 'minecraft server is not running'
+    exit 1
 fi
 
 # parse config:
@@ -162,38 +171,33 @@ if [ "$flg_srt" = true ]; then
     fi
 
     # launch minecraft server:
-    trap "rm -f $loc" EXIT
-    printf '%d\n' "$pid" > "$loc"
+    cd "$srv"
     msg "java -Xms${mem_srt} -Xmx${mem} -jar $jar --nogui"
-    java "-Xms${mem_srt}" "-Xmx${mem}" -jar "$jar" --nogui
+    java "-Xms${mem_srt}" "-Xmx${mem}" -jar "$jar" --nogui &
+    printf '%d\n' "$!" > "$loc"
     exit
 fi
 
 # server not running:
-if [ ! -f "$loc" ]; then
+if [ ! -f "$loc" ] || ! ps -p "$(cat "$loc")" &>/dev/null; then
     msg_error 'minecraft server not running'
     exit 7
 fi
-pid="$(cat "$loc")"
-if ! ps -p "$pid" &>/dev/null; then
-    rm "$loc"
-    msg_error 'minecraft server not running'
-    exit 7
-fi
+stdin="/proc/$(cat "$loc")/fd/0"
 
 # cannot write to server stdin:
 if [ ! -w "/proc/$pid/fd/0" ]; then
-    msg_error "cannot write server stdin: /proc/$pid/fd/0"
+    msg_error "cannot write server stdin: $stdin"
     exit 7
 fi
 
 # stop server:
 if [ "$flg_stop" = true ]; then
-    printf 'stop\n' > "/proc/$pid/fd/0"
+    printf 'stop\n' > "$stdin"
 
 # send single command to server:
 elif [ "$flg_cmd" = true ]; then
-    printf '%s\n' "$*" > "/proc/$pid/fd/0"
+    printf '%s\n' "$*" > "$stdin"
 
 # interactive command mode:
 elif [ "$flg_con" = true ]; then

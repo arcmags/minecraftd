@@ -1,0 +1,33 @@
+# Maintainer: Chris Magyar <c.magyar.ec@gmail.com>
+
+pkgname=minecraftd
+pkgver=1.20.4
+pkgrel=1
+url='https://minecraft.net/'
+pkgdesc='Minecraft server daemon script, unit files, and official jar'
+arch=(any)
+license=(custom)
+depends=(java-runtime-headless)
+conflicts=(minecraft-canary minecraft-server minecraft-server-manager minecraft-server-systemd)
+_gitver='1.0'
+_giturl="https://github.com/arcmags/${pkgname}/archive/${_gitver}.tar.gz"
+_jarnonce='8dd1a28015f51b1803213892b50b7b4fc76e594d'
+_jarurl="https://launcher.mojang.com/v1/objects/${_jarnonce}/server.jar"
+#source=("mcserver-${pkgver}.jar"::"${_jarurl}" "minecraftd-${_gitver}.tar.gz"::"${_giturl}")
+#source=("mcserver-${pkgver}.jar"::"${_jarurl}" "minecraftd-${_gitver}.tar.gz"::'minecraftd.tar.zst')
+source=("mcserver-${pkgver}.jar"::"${_jarurl}" 'minecraftd.tar.zst')
+noextract=("mcserver.${pkgver}.jar")
+md5sums=(f57b897c9b81255a518b9e474e5c57d7 SKIP)
+
+package() {
+    make PREFIX="${pkgdir}" install
+
+	install -Dm644 "mcserver-${pkgver}.jar" "${pkgdir}/usr/share/java/mcserver.${pkgver}.jar"
+	ln -sf "mcserver.${pkgver}.jar" "${pkgdir}/usr/share/java/mcserver.jar"
+
+    mkdir -p "${pkgdir}/srv/minecraft"
+	chmod g+s "${pkgdir}/srv/minecraft"
+	ln -sf /usr/share/java/mcserver.jar "${pkgdir}/srv/minecraft/mcserver.jar"
+}
+
+# vim:ft=bash

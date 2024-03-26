@@ -9,18 +9,17 @@ arch=(any)
 license=(custom)
 depends=('bash' 'java-runtime-headless>=16')
 conflicts=(minecraft-canary minecraft-server minecraft-server-manager minecraft-server-systemd)
-_gitver='1.0'
+_gitver='1.0.0'
 _giturl="https://github.com/arcmags/${pkgname}/archive/${_gitver}.tar.gz"
 _jarnonce='8dd1a28015f51b1803213892b50b7b4fc76e594d'
 _jarurl="https://launcher.mojang.com/v1/objects/${_jarnonce}/server.jar"
-#source=("mcserver-${pkgver}.jar"::"${_jarurl}" "minecraftd-${_gitver}.tar.gz"::"${_giturl}")
-#source=("mcserver-${pkgver}.jar"::"${_jarurl}" "minecraftd-${_gitver}.tar.gz"::'minecraftd.tar.zst')
-source=("mcserver-${pkgver}.jar"::"${_jarurl}" 'minecraftd.tar.zst')
+source=("minecraftd-${_gitver}.tar.gz"::"${_giturl}" "mcserver-${pkgver}.jar"::"${_jarurl}")
 noextract=("mcserver.${pkgver}.jar")
-md5sums=(f57b897c9b81255a518b9e474e5c57d7 SKIP)
+md5sums=(8009fb5c8485d85c4eedffd1c2d4ea17 f57b897c9b81255a518b9e474e5c57d7)
 
 package() {
-    make PREFIX="${pkgdir}" install
+    echo " > PWD = $PWD"
+    make -C "${srcdir}/minecraftd-${_gitver}" PREFIX="${pkgdir}" install
 	install -Dm644 "mcserver-${pkgver}.jar" "${pkgdir}/usr/share/java/mcserver.${pkgver}.jar"
 	ln -sf "mcserver.${pkgver}.jar" "${pkgdir}/usr/share/java/mcserver.jar"
 }

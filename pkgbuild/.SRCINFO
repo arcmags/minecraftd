@@ -5,6 +5,7 @@ pkgbase = minecraftd
 	url = https://minecraft.net/
 	arch = any
 	license = custom
+	depends = bash
 	depends = java-runtime-headless>=16
 	conflicts = minecraft-canary
 	conflicts = minecraft-server

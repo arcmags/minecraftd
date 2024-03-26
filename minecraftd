@@ -7,7 +7,7 @@ NAME
     minecraftd
 
 SYNOPSIS
-    minecraftd <COMMAND>
+    minecraftd [COMMAND]
 
 DESCRIPTION
     minecraftd is Minecraft server daemon control script. It can start, stop,
@@ -20,7 +20,7 @@ COMMANDS
     stop, stp
         Stop minecraft server.
 
-    command, cmd <COMMAND>
+    command, cmd [COMMAND...]
         Send COMMAND to minecraft server.
 
     connect, con
@@ -43,26 +43,40 @@ HELPDOC
 ## internal control ::
 cfgs=(/etc/minecraftd.conf /etc/minecraftd.d/* ~/.config/minecraftd.conf minecraftd.conf)
 cmd=
-cmds=()
+fifo='/tmp/minecraftd.fifo'
 flg_cmd=false
 flg_con=false
 flg_srt=false
 flg_stp=false
 jar='/usr/share/java/mcserver.jar'
-loc='/tmp/minecraftd.lock'
 mem='2g'
 mem_srt='1g'
 mem_tmp=
-n_acts=0
-stdin=
 reqs=(java)
 srv='/srv/minecraft'
 
 ## functions ::
+error() { msg_error "$@"; exit 5 ;}
 msg() { printf "\e[1;38;5;12m=> \e[0;38;5;15m$1\e[0m\n" "${@:2}" ;}
 msg_error() { printf "\e[1;38;5;9mE: \e[0;38;5;15m$1\e[0m\n" "${@:2}" >&2 ;}
 msg_warn() { printf "\e[1;38;5;11mW: \e[0;38;5;15m$1\e[0m\n" "${@:2}" >&2 ;}
 
+server() {
+    trap '{ kill "$pid_fifo" &>/dev/null; rm -f "$fifo" ;}' EXIT
+    rm -f "$fifo"
+    mkfifo "$fifo"
+    chmod +t "$fifo"
+    sleep infinity >"$fifo" &
+    local pid_fifo=$!
+    cd "$srv"
+    msg "java -Xms${mem_srt} -Xmx${mem} -jar $jar --nogui"
+    java "-Xms${mem_srt}" "-Xmx${mem}" -jar "$jar" --nogui <"$fifo"
+    sleep 1
+    echo here2
+    exit
+}
+
+# messages write to system log if running via systemd:
 if [ $PPID -eq 1 ]; then
     msg() { logger -p 5 --id=$$ -t minecraftd "$@" ;}
     msg_error() { logger -p 3 --id=$$ -t minecraftd "$@" ;}
@@ -70,43 +84,24 @@ if [ $PPID -eq 1 ]; then
 fi
 
 ## main ::
-while (($#)); do case "$1" in
-    stp|stop) flg_stp=true; ((n_acts++)) ;;
-    srt|start) flg_srt=true; ((n_acts++)) ;;
-    cmd|command) flg_cmd=true; shift; break; ((n_acts++)) ;;
-    con|connect) flg_con=true; ((n_acts++)) ;;
+[ $# -eq 0 ] && { print_help; exit 0 ;}
+
+case "$1" in
+    cmd|command) flg_cmd=true ;;
+    con|connect) flg_con=true ;;
+    srt|start) flg_srt=true ;;
+    stp|stop) flg_stp=true ;;
     -H|--help) print_help; exit 0 ;;
-    --) shift; break ;;
-    *) break ;;
-esac; shift; done
+    *) error "unknown option: $1" ;;
+esac
+shift
+cmd="$*"
 
-# check requirements:
+[ "$flg_cmd" != true ] && [ -n "$cmd" ] && error "too many args: $*"
+
 for req in "${reqs[@]}"; do if ! command -v "$req" &>/dev/null; then
-    msg_error 'required: %s' "$req"
-    exit 4
+    error "missing requirement: $req"
 fi; done
-
-# too many actions:
-if [ $n_acts -gt 1 ]; then
-    msg_error 'too many actions'
-    exit 3
-fi
-
-# unknown args/action:
-if [ "$flg_cmd" = false ] && [ $# -gt 0 ]; then
-    msg_error "unknown args: $*"
-    exit 3
-fi
-
-# no action:
-if [ $n_acts -eq 0 ]; then
-    if [ -f "$loc" ] && ps -p "$(cat "$loc")" &>/dev/null; then
-        msg 'minecraft server is running'
-        exit
-    fi
-    msg 'minecraft server is not running'
-    exit 1
-fi
 
 # parse config:
 mapfile -t lines < <(sed -E -e 's/(^\s+|\s+$)//g' -e '/^(#|$|-$)/d' "${cfgs[@]}" 2>/dev/null)
@@ -116,96 +111,47 @@ for line in "${lines[@]}"; do
     [[ "$line" =~ ^srv:\ +(.*) ]] && srv="${BASH_REMATCH[1]}" && continue
 done
 
-# .jar file not found:
-if [ ! -f "$jar" ]; then
-    msg_error "not found: $jar"
-    exit 4
-fi
+[ ! -f "$jar" ] && error "jar not found: $jar"
 
-# parse memory allocation:
-if [[ "${mem,,}" =~ ^([0-9]+)([kmg]?)$ ]]; then
-    if [ "${BASH_REMATCH[2]}" = k ]; then
-        mem_tmp=$((BASH_REMATCH[1] * 1000))
-    elif [ "${BASH_REMATCH[2]}" = m ]; then
-        mem_tmp=$((BASH_REMATCH[1] * 1000000))
-    elif [ "${BASH_REMATCH[2]}" = g ]; then
-        mem_tmp=$((BASH_REMATCH[1] * 1000000000))
-    else
-        mem_tmp="$mem"
-    fi
-
-    # not enough memory allocated:
-    if [ "$mem_tmp" -lt 5000000 ]; then
-        msg_error "not enough memory (500m min): $mem"
-        exit 5
-    fi
-
-    # set starting memory:
-    [ "$mem_tmp" -lt 1000000000 ] && mem_srt="$mem"
-
-# invalid memory allocation string:
+[[ ! "${mem,,}" =~ ^([0-9]+)([kmg]?)$ ]] && error "invalid memory string: $mem"
+if [ "${BASH_REMATCH[2]}" = k ]; then
+    mem_tmp=$((BASH_REMATCH[1] * 1000))
+elif [ "${BASH_REMATCH[2]}" = m ]; then
+    mem_tmp=$((BASH_REMATCH[1] * 1000000))
+elif [ "${BASH_REMATCH[2]}" = g ]; then
+    mem_tmp=$((BASH_REMATCH[1] * 1000000000))
 else
-    msg_error "invalid memory allocation: $mem"
-    exit 6
+    mem_tmp="$mem"
 fi
+[ "$mem_tmp" -lt 5000000 ] && error "not enough memory (500m min): $mem"
+[ "$mem_tmp" -lt 1000000000 ] && mem_srt="$mem"
 
 # start server:
 if [ "$flg_srt" = true ]; then
-    # server already running:
-    if [ -f "$loc" ] && ps -p "$(cat "$loc")" &>/dev/null; then
-        msg_warn 'minecraft server already running'
-        exit 7
-    fi
-    [ -f "$loc" ] && rm "$loc"
-
-    # no server directory:
-    if [ ! -d "$srv" ]; then
-        msg_error "server directory not found: $srv"
-        exit 6
-    fi
-
-    # cannot to write server directory:
-    if [ ! -w "$srv" ]; then
-        msg_error "cannot write server directory: $srv"
-        exit 5
-    fi
-
-    # launch minecraft server:
-    cd "$srv"
-    msg "java -Xms${mem_srt} -Xmx${mem} -jar $jar --nogui"
-    java "-Xms${mem_srt}" "-Xmx${mem}" -jar "$jar" --nogui &
-    printf '%d\n' "$!" > "$loc"
+    # TODO: check for pid of minecraftd
+    [ -p "$fifo" ] && error "fifo already exist: $fifo"
+    [ ! -d "$srv" ] && error "server directory not found: $srv"
+    [ ! -w "$srv" ] && error "cannot write server directory: $srv"
+    server &
+    sleep 0.2
+    true >"$fifo"
     exit
 fi
 
-# server not running:
-if [ ! -f "$loc" ] || ! ps -p "$(cat "$loc")" &>/dev/null; then
-    msg_error 'minecraft server not running'
-    exit 7
-fi
-stdin="/proc/$(cat "$loc")/fd/0"
+[ ! -e "$fifo" ] && error 'server fifo not found'
+[ ! -w "$fifo" ] && error 'cannot write server fifo'
 
-# cannot write to server stdin:
-if [ ! -w "/proc/$pid/fd/0" ]; then
-    msg_error "cannot write server stdin: $stdin"
-    exit 7
-fi
+# send commands to server:
+[ "$flg_stop" = true ] && printf 'stop\n' >"$fifo"
+[ "$flg_cmd" = true ] && printf '%s\n' "$cmd" >"$fifo"
 
-# stop server:
-if [ "$flg_stop" = true ]; then
-    printf 'stop\n' > "$stdin"
-
-# send single command to server:
-elif [ "$flg_cmd" = true ]; then
-    printf '%s\n' "$*" > "$stdin"
-
-# interactive command mode:
-elif [ "$flg_con" = true ]; then
+# connect to server
+if [ "$flg_con" = true ]; then
     msg 'connected to minecraft server stdin...'
     while read -r -p $'\e[1;38;5;10m'"> "$'\e[0m' cmd; do
         cmd="${cmd,,}"
         [ "$cmd" = quit ] || [ "$cmd" = exit ] && break
-        [[ ! "$cmd" =~ ^\ *$ ]] && printf '%s\n' "$cmd" > "/proc/$pid/fd/0"
+        [[ ! "$cmd" =~ ^\ *$ ]] && printf '%s\n' "$cmd" >"$fifo"
         [ "$cmd" = stop ] && break
     done
 fi

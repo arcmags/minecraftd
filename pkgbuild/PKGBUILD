@@ -7,7 +7,7 @@ url='https://minecraft.net/'
 pkgdesc='Minecraft server daemon script, unit files, and official jar'
 arch=(any)
 license=(custom)
-depends=('java-runtime-headless>=16')
+depends=('bash' 'java-runtime-headless>=16')
 conflicts=(minecraft-canary minecraft-server minecraft-server-manager minecraft-server-systemd)
 _gitver='1.0'
 _giturl="https://github.com/arcmags/${pkgname}/archive/${_gitver}.tar.gz"

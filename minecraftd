@@ -26,6 +26,9 @@ COMMANDS
     connect, con
         Launch interactive minecraft server input prompt.
 
+    -H, --help
+        Display help text and exit.
+
 CONFIGURATION
     minecraftd sources the following config files (if they exist) in order:
         /etc/minecraftd.conf      - system wide config
@@ -61,6 +64,13 @@ msg() { printf "\e[1;38;5;12m=> \e[0;38;5;15m$1\e[0m\n" "${@:2}" ;}
 msg_error() { printf "\e[1;38;5;9mE: \e[0;38;5;15m$1\e[0m\n" "${@:2}" >&2 ;}
 msg_warn() { printf "\e[1;38;5;11mW: \e[0;38;5;15m$1\e[0m\n" "${@:2}" >&2 ;}
 
+# write to system log if running via systemd:
+if [ $PPID -eq 1 ]; then
+    msg() { logger -p 5 --id=$$ -t minecraftd "$@" ;}
+    msg_error() { logger -p 3 --id=$$ -t minecraftd "$@" ;}
+    msg_warn() { logger -p 4 --id=$$ -t minecraftd "$@" ;}
+fi
+
 server() {
     trap '{ kill "$pid_fifo" &>/dev/null; rm -f "$fifo" ;}' EXIT
     rm -f "$fifo"
@@ -75,13 +85,6 @@ server() {
     echo here2
     exit
 }
-
-# messages write to system log if running via systemd:
-if [ $PPID -eq 1 ]; then
-    msg() { logger -p 5 --id=$$ -t minecraftd "$@" ;}
-    msg_error() { logger -p 3 --id=$$ -t minecraftd "$@" ;}
-    msg_warn() { logger -p 4 --id=$$ -t minecraftd "$@" ;}
-fi
 
 ## main ::
 [ $# -eq 0 ] && { print_help; exit 0 ;}

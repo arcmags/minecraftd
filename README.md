@@ -22,7 +22,7 @@ script. You may create a `minecraftd.conf` in any directory and run
 ### Dependencies
 - bash
 - java
-- minecraft server [jar file][mcjar]
+- [minecraft server jar][mcjar]
 
 ## Usage
 
@@ -45,7 +45,7 @@ script. You may create a `minecraftd.conf` in any directory and run
 `-H`, `--help`
 : Display help and exit.
 
-## Config
+## Configuration
 
 Minecraftd sources the following config files (if they exist) in order:
 - */etc/minecraftd.conf*

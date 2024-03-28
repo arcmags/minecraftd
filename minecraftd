@@ -37,7 +37,7 @@ CONFIGURATION
         ./minecraftd.conf         - local config
 
     These files are strict-yaml containing the following keys:
-        jar - server jar file (default: /usr/share/java/mcserver.jar)
+        jar - server jar file (default: /usr/share/java/minecraft-server.jar)
         mem - maximum memory allocated to server (default: 2g)
         srv - server directory (default: /srv/minecraft)
 HELPDOC
@@ -51,7 +51,7 @@ flg_cmd=false
 flg_con=false
 flg_srt=false
 flg_stp=false
-jar='/usr/share/java/mcserver.jar'
+jar='/usr/share/java/minecraft-server.jar'
 mem='2g'
 mem_srt='1g'
 mem_tmp=
@@ -151,7 +151,7 @@ fi
 # connect to server
 if [ "$flg_con" = true ]; then
     msg 'connected to minecraft server stdin...'
-    while read -r -p $'\e[1;38;5;10m'"> "$'\e[0m' cmd; do
+    while read -rep $'\e[1;38;5;10m'"> "$'\e[0m' cmd; do
         cmd="${cmd,,}"
         [ "$cmd" = quit ] || [ "$cmd" = exit ] && break
         [[ ! "$cmd" =~ ^\ *$ ]] && printf '%s\n' "$cmd" >"$fifo"

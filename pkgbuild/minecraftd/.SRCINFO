@@ -1,0 +1,12 @@
+pkgbase = minecraftd
+	pkgdesc = Minecraft server daemon script and unit files
+	pkgver = 1.0.0
+	pkgrel = 1
+    url = https://github.com/arcmags/minecraftd
+	arch = any
+	license = MIT
+	depends = bash
+	depends = minecraft-jar
+    source = https://github.com/arcmags/minecraftd/archive/1.0.0.tar.gz"
+    sha256sums = 9099364e134ca57fac8eab726b86b061c5035ca68d4cd25ec15b9987d477e417
+pkgname = minecraftd

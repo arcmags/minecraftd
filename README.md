@@ -56,7 +56,7 @@ Minecraftd sources the following config files (if they exist) in order:
 These files are [strictyaml][syaml] containing the following keys:
 
 `jar`
-: Minecraft server jar file. (default: */usr/share/java/mcserver.jar*)
+: Minecraft server jar file. (default: */usr/share/java/minecraft-server.jar*)
 
 `mem`
 : Maximum memory allocated to minecraft server. (default: 2G)

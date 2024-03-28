@@ -1,0 +1,19 @@
+# Maintainer: Chris Magyar <c.magyar.ec@gmail.com>
+
+pkgname=minecraftd
+pkgver=1.0.0
+pkgrel=1
+url="https://github.com/arcmags/${pkgname}"
+pkgdesc='Minecraft server daemon script and unit files'
+arch=(any)
+license=(MIT)
+depends=('bash' 'minecraft-jar')
+conflicts=()
+source=("minecraftd-${pkgver}.tar.gz"::"${url}/archive/${pkgver}.tar.gz")
+sha256sums=(9099364e134ca57fac8eab726b86b061c5035ca68d4cd25ec15b9987d477e417)
+
+package() {
+    make -C "${srcdir}/minecraftd-${pkgver}" PREFIX="${pkgdir}" install
+}
+
+# vim:ft=bash

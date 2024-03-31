@@ -62,7 +62,7 @@ srv='/srv/minecraft'
 error() { msg_error "$@"; exit 5 ;}
 msg() { printf "\e[1;38;5;12m=> \e[0;38;5;15m$1\e[0m\n" "${@:2}" ;}
 msg_error() { printf "\e[1;38;5;9mE: \e[0;38;5;15m$1\e[0m\n" "${@:2}" >&2 ;}
-msg_warn() { printf "\e[1;38;5;11mW: \e[0;38;5;15m$1\e[0m\n" "${@:2}" >&2 ;}
+msg_warn() { printf "\e[1;38;5;11mW: \e[0;38;5;15m$1\e[0m\n" "${@:2}" >&2 ;}ac
 
 # write to system log if running via systemd:
 if [ $PPID -eq 1 ]; then
@@ -79,14 +79,22 @@ server() {
     sleep infinity >"$fifo" &
     local pid_fifo=$!
     cd "$srv"
+    msg "Starting minecraft server..."
     msg "java -Xms${mem_srt} -Xmx${mem} -jar $jar --nogui"
     java "-Xms${mem_srt}" "-Xmx${mem}" -jar "$jar" --nogui <"$fifo"
+    msg "Minecraft server stopped"
     exit
 }
 
 ## main ::
-[ $# -eq 0 ] && { print_help; exit 0 ;}
+[ $# -eq 0 ] && { print_help; exit 2 ;}
 
+# check requirements:
+for req in "${reqs[@]}"; do if ! command -v "$req" &>/dev/null; then
+    error "missing requirement: $req"
+fi; done
+
+# parse args:
 case "$1" in
     cmd|command) flg_cmd=true ;;
     con|connect) flg_con=true ;;
@@ -97,12 +105,7 @@ case "$1" in
 esac
 shift
 cmd="$*"
-
 [ "$flg_cmd" != true ] && [ -n "$cmd" ] && error "too many args: $*"
-
-for req in "${reqs[@]}"; do if ! command -v "$req" &>/dev/null; then
-    error "missing requirement: $req"
-fi; done
 
 # parse config:
 mapfile -t lines < <(sed -E -e 's/(^\s+|\s+$)//g' -e '/^(#|$|-$)/d' "${cfgs[@]}" 2>/dev/null)
@@ -112,8 +115,13 @@ for line in "${lines[@]}"; do
     [[ "$line" =~ ^srv:\ +(.*) ]] && srv="${BASH_REMATCH[1]}" && continue
 done
 
+# check files:
 [ ! -f "$jar" ] && error "jar not found: $jar"
+[ ! -d "$srv" ] && error "server directory not found: $srv"
+[ ! -w "$srv" ] && error "cannot write server directory: $srv"
 
+# check memory value:
+# TODO: check available memory
 [[ ! "${mem,,}" =~ ^([0-9]+)([kmg]?)$ ]] && error "invalid memory string: $mem"
 if [ "${BASH_REMATCH[2]}" = k ]; then
     mem_tmp=$((BASH_REMATCH[1] * 1000))
@@ -131,30 +139,42 @@ fi
 if [ "$flg_srt" = true ]; then
     # TODO: check for pid of minecraftd
     [ -p "$fifo" ] && error "fifo already exist: $fifo"
-    [ ! -d "$srv" ] && error "server directory not found: $srv"
-    [ ! -w "$srv" ] && error "cannot write server directory: $srv"
     server &
     sleep 0.2
     true >"$fifo"
+    sleep 1.8
     exit
 fi
 
-[ ! -e "$fifo" ] && error 'server fifo not found'
+# check fifo:
+[ ! -p "$fifo" ] && error 'server fifo not found'
 [ ! -w "$fifo" ] && error 'cannot write server fifo'
 
-# send commands to server:
-[ "$flg_stop" = true ] && printf 'stop\n' >"$fifo"
-[ "$flg_cmd" = true ] && printf '%s\n' "$cmd" >"$fifo"
+# send single command to server:
+if [ "$flg_cmd" = true ]; then
+    if [ "${cmd,,}" != stop ]; then
+        printf '%s\n' "$cmd" >"$fifo"
+    else
+        flg_stp=true
+    fi
+fi
 
-# connect to server
+# connect to server to send multiple commands:
 if [ "$flg_con" = true ]; then
     msg 'connected to minecraft server stdin...'
     while read -rep $'\e[1;38;5;10m'"> "$'\e[0m' cmd; do
-        cmd="${cmd,,}"
-        [ "$cmd" = quit ] || [ "$cmd" = exit ] && break
+        [ "${cmd,,}" = exit ] && break
+        [ "${cmd,,}" = stop ] && flg_stp=true && break
         [[ ! "$cmd" =~ ^\ *$ ]] && printf '%s\n' "$cmd" >"$fifo"
-        [ "$cmd" = stop ] && break
     done
+fi
+
+# TODO: backup command
+
+# stop server:
+if [ "$flg_stp" = true ]; then
+    printf 'stop\n' >"$fifo"
+    sleep 8
 fi
 
 # vim:ft=bash

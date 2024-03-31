@@ -81,8 +81,6 @@ server() {
     cd "$srv"
     msg "java -Xms${mem_srt} -Xmx${mem} -jar $jar --nogui"
     java "-Xms${mem_srt}" "-Xmx${mem}" -jar "$jar" --nogui <"$fifo"
-    sleep 1
-    echo here2
     exit
 }
 

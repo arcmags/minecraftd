@@ -1,4 +1,4 @@
-pkgbase = minecraft-jar
+pkgbase = minecraft-server-jar
     pkgdesc = Official Minecraft server jar file
 	pkgver = 1.20.4
 	pkgrel = 1

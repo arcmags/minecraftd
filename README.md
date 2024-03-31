@@ -7,9 +7,7 @@ directly from the command line. A simple [fifo][fifo] is created to allow
 sending commands directly to the server's stdin.
 
 Minecraftd can be run by any user that has write access to the minecraft server
-directory. If your server is visible to the internet, you probably shouldn't
-run minecraftd as your normal user account. The systemd unit is configured to
-run as user *minecraft*.
+directory. The systemd unit is configured to run minecraftd as user *minecraft*.
 
 ## Installation
 
@@ -22,6 +20,8 @@ installation.
 Note that installation is not explicitly required to run the `minecraftd`
 script. You may create a `minecraftd.conf` in any directory and run
 `minecraftd` there to source it and start a minecraft server.
+
+Minecraftd is also available in the [AUR][aur].
 
 ### Dependencies
 - bash
@@ -51,7 +51,7 @@ script. You may create a `minecraftd.conf` in any directory and run
 
 ## Usage: systemd
 
-    systemclt enable minecraftd.service
+    systemctl enable minecraftd.service
     systemctl start minecraftd.service
 
 ## Configuration
@@ -83,13 +83,14 @@ running tmux running a server when I could just have systemd run a server.
 [Chris Magyar](https://mags.zone)\
 [MIT](https://opensource.org/licenses/MIT)
 
+[aur]: https://aur.archlinux.org/packages/minecraftd
 [fifo]: https://man7.org/linux/man-pages/man7/fifo.7.html
 [mcjar]: https://www.minecraft.net/en-us/download/server
 [syaml]: https://hitchdev.com/strictyaml/
 
 <!--metadata:
 author: Chris Magyar <c.magyar.ec@gmail.com>
-description: Automated symbolic link creator.
-keywords: uln, link, symbolic link
+description: Minecraft server wrapper script and systemd unit.
+keywords: minecraft, minecraft server, systemd
 css: ../css/main.css
 -->

@@ -16,6 +16,6 @@ install:
 uninstall:
 	rm -r $(PREFIX)/usr/share/licenses/minecraftd
 	rm $(PREFIX)/usr/bin/minecraftd
-	rm $(PREFIX)/etc/minecraft.conf
+	rm $(PREFIX)/etc/minecraftd.conf
 	rm $(PREFIX)/usr/lib/sysusers.d/minecraft.conf
 	rm $(PREFIX)/usr/lib/systemd/system/minecraftd.service

@@ -6,7 +6,7 @@ and minecraft-server-jar.
 Unlike similar AUR packages, [minecraftd][aur] does not include the official
 minecraft [jar file][mcjar]. Rather, minecraftd has
 [minecraft-server-jar][aurjar] as a dependency to install the official jar.
-This done for several reasons:
+This is done for several reasons:
 
 - minecraftd and the official jar have different software licenses
 - it allows minecraftd and the official jar to be updated independently

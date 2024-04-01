@@ -43,6 +43,9 @@ CONFIGURATION
 HELPDOC
 }
 
+# TODO: look into putting fifo in /var/run/... with group writable permissions
+# TODO: maybe make a pretty printer for the server log?
+
 ## internal control ::
 cfgs=(/etc/minecraftd.conf /etc/minecraftd.d/* ~/.config/minecraftd.conf minecraftd.conf)
 cmd=
@@ -137,7 +140,7 @@ fi
 
 # start server:
 if [ "$flg_srt" = true ]; then
-    # TODO: check for pid of minecraftd
+    # TODO: check for pid of minecraftd/java
     [ -p "$fifo" ] && error "fifo already exist: $fifo"
     server &
     sleep 0.2
@@ -152,10 +155,10 @@ fi
 
 # send single command to server:
 if [ "$flg_cmd" = true ]; then
-    if [ "${cmd,,}" != stop ]; then
-        printf '%s\n' "$cmd" >"$fifo"
-    else
+    if [ "${cmd,,}" = stop ]; then
         flg_stp=true
+    else
+        printf '%s\n' "$cmd" >"$fifo"
     fi
 fi
 
@@ -174,7 +177,7 @@ fi
 # stop server:
 if [ "$flg_stp" = true ]; then
     printf 'stop\n' >"$fifo"
-    sleep 8
+    sleep 4
 fi
 
 # vim:ft=bash
